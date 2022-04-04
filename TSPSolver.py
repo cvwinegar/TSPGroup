@@ -371,4 +371,5 @@ class TSPSolver:
 
 	def fancy( self,time_allowance=60.0 ):
 		#divide and conquer ? ---> two different paths
+		#Not all that glitters is gold
 		pass

@@ -177,3 +177,94 @@ class City:
 
 		return int(math.ceil(cost * self.MAP_SCALE))
 
+#cluster of cities is called neighborhood
+class Neighborhood:
+	"""
+	__ methods should inlcude init and average distance
+	other method needed are shortest path of neighborhoods, path between neightborhoods, merge
+	"""
+	def __init__(self, route: list):
+		#set to 0
+		self.route = route
+		self.avg_x = 0.
+		self.avg_y = 0.
+		self.avg_elev = 0.
+
+		#to optimize merge average f city
+		for city in route:
+			self.avg_x += city._x
+			self.avg_y += city._y
+			self.avg_elev += city._elevation
+		#now do the divide part of average
+		self.avg_x /= len(route)
+		self.avg_y /= len(route)
+		self.avg_elev /= len(route)
+
+	#gets distance average between city1 and city2
+	def __average_distance(self, city1, city2):
+		#used city as example
+		# Euclidean Distance
+		cost = math.sqrt( (city2.avg_x - city1._x)**2 + 
+						  (city2.avg_y - city1._y)**2 )
+		#need to account for elevation as part of distance (z)
+		cost += (city2.avg_elev - city1._elevation)
+		#reset cost to 0 if less than 0 needs to be more exact (not limited to strictly int)
+		if cost < 0.0: cost = 0.0
+		return int(math.ceil(cost * 1000.0))
+
+	#I think this is nm where n is len of neighborhood and m is len of other_cities
+	def shortest_neightborhood_path(self, other_city):
+		#city 1 to city 2 and city 3 to city 4
+		#make neighborhood to be sorted by distance
+		neighborhood = sorted(self.route.copy(), key=lambda c: self.__average_distance(c, other_city))
+		for city_1 in neighborhood:
+			#make var other cities to be sorfted by cost
+			other_cities = sorted(other_city.route.copy(), key=lambda c: city_1.costTo(c))
+			for city_2 in other_cities:
+				#check route of city 2 modded by len of route
+				city_3 = other_city.route[(other_city.route.index(city_2) - 1) % len(other_city.route)]
+				#check route of city 1 modded by len of route
+				city_4 = self.route[(self.route.index(city_1) + 1) % len(self.route)]
+				#if cost of city 1 to 2 adn city 3 to 4 are not infinte return that path
+				if city_1.costTo(city_2) < np.inf and city_3.costTo(city_4) < np.inf: return [city_1, city_2]
+		return None
+	
+	#I think that is is nm where n is len of self.route and m is len of other_neighborhood.route
+	def path_between_neighborhoods(self, other_neighborhood):
+		#want to get teh min
+		min_cost = np.inf
+		min_city_1 = None
+		min_city_2 = None
+		#check for all city 1
+		#similar to shortest nieghborhood path system byt instead of doing it by neighborhood do it by route
+		for city_1 in self.route:
+			for city_2 in other_neighborhood.route:
+				city_3 = other_neighborhood.route[(other_neighborhood.route.index(city_2) - 1) % len(other_neighborhood.route)]
+				city_4 = self.route[(self.route.index(city_1) + 1) % len(self.route)]
+				cost = city_1.costTo(city_2) + city_3.costTo(city_4) - city_1.costTo(city_4) - city_3.costTo(city_2)
+				#check cost 
+				if cost < min_cost:
+					min_cost = cost
+					min_city_1 = city_1
+					min_city_2 = city_2
+		#chekc min costs retrun min city 1 & 2			
+		if min_cost < np.inf: return [min_city_1, min_city_2]
+		else: return None
+
+	#I think this is nm where n is len of self.route and m is len of temp_route which is set to other_node.rout
+	def merge_together(self, other_node):
+		path_between = self.path_between_neighborhoods(other_node)
+		#if no path is returned no path is possible... exit
+		if path_between is None: return None
+		new_route = []
+		for city in self.route:
+			#append city to the new orute
+			new_route.append(city)
+			#check if city is in path betweenk
+			if city is path_between[0]:
+				#need temp route and index for walking through honestly done for organization
+				temp_route = other_node.route
+				temp_index = temp_route.index(path_between[1])
+				for i in range(len(temp_route)): new_route.append(temp_route[(temp_index + i) % len(temp_route)])
+		return Neighborhood(new_route)
+		

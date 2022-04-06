@@ -369,7 +369,56 @@ class TSPSolver:
 		algorithm</returns>
 	'''
 
-	def fancy( self,time_allowance=60.0 ):
-		#divide and conquer ? ---> two different paths
-		#Not all that glitters is gold
-		pass
+	def fancy(self, time_allowance=60.0):
+		#taken from defaultRandomTour and edited out the ones that aren't needed/added what we needed
+		results = {}
+		cities = self._scenario.getCities().copy()
+		start_time = time.time()		
+		#divide and Conquer using a clustered city called neighborhood
+		#divide in vertaically
+		neighborhood_solutioin = self.divideNeighborhood(cities, "vertical")
+		solution = TSPSolution(neighborhood_solutioin.route)		
+		end_time = time.time()
+		results['cost'] = solution.cost if solution is not None else math.inf
+		results['time'] = end_time - start_time
+		results['count'] = None
+		results['soln'] = solution
+		results['max'] = None
+		results['total'] = None
+		results['pruned'] = None
+		return results
+
+	#need to get x and y values (Basic getters)
+	def get_x_value(self, city): return city._x	
+	def get_y_value(self, city): return city._y
+
+	def divideNeighborhood(self, cities, split_dir): 
+		#ideally works with 3. if not (greater) 3 need to split again
+		#3 works because if we have 2 cities that is just a comparison. WE need to have 3. but we don not want more than 3, as that would get too large.
+		# That is why the recursive seciton is set in the else statement
+		if len(cities) < 3: return Neighborhood(cities)
+		elif len(cities) == 3:
+			# return subsolution w/ optimal route between 3 cities
+			if TSPSolution(cities).cost < TSPSolution(cities[::-1]).cost: return Neighborhood(cities)
+			else: return Neighborhood(cities[::-1])
+		#split it again
+		#vars needed new split direction, left Cities and Right Cities as wella s the Neighborhood clusters of them
+		#for splitting need to know x and y value
+		else:
+			new_split_dir = ""
+			if split_dir == "vertical":
+				cities.sort(key=self.get_x_value)
+				new_split_dir = "horizontal"
+			else:
+				cities.sort(key=self.get_y_value)
+				new_split_dir = "vertical"
+			#set to left and right halves
+			leftCities = cities[0:len(cities)//2]
+			rightCities = cities[len(cities)//2:len(cities)]
+			#recursive if needed
+			leftNieghborhood = self.divideNeighborhood(leftCities, new_split_dir)
+			rightNeighborhood = self.divideNeighborhood(rightCities, new_split_dir)
+			#after they have been split... need to be mergfed
+			return leftNieghborhood.merge_together(rightNeighborhood)
+
+	
